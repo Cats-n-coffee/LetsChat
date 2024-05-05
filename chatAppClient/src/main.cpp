@@ -8,7 +8,7 @@
 
 int main()
 {
-    // Create a socket
+    // ============ Create a socket
     int tcpSocket = socket(AF_INET, SOCK_STREAM, 0);
 
     if (tcpSocket == -1) {
@@ -16,31 +16,6 @@ int main()
         return -1;
     }
     std::cout << "after creation" << std::endl;
-    // bind to an address and port?
-    // struct hostent *hostInfo;
-    // hostInfo = gethostbyname("127.0.0.1");
-
-    struct sockaddr_in socketAddr;
-
-    socketAddr.sin_family = AF_INET; // Address family
-    socketAddr.sin_port = htons(5052); // Port
-    inet_aton("127.0.0.1", &socketAddr.sin_addr); // ipv4 address
-    // socketAddr.sin_addr = *(struct in_addr *) hostInfo->h_name;
-
-
-    if (bind(tcpSocket, (struct sockaddr*) &socketAddr, sizeof(socketAddr)) == -1) {
-        // handle error
-        std::cout << "error bind" << std::endl;
-        return -1;
-    }
-    std::cout << "after bind" << std::endl;
-    // listen for requests?
-    // if (listen(tcpSocket, 50) == -1) {
-    //     // handle error
-    //     std::cout << "error listen" << std::endl;
-    //     return -1;
-    // }
-    // std::cout << "after listen" << std::endl;
 
     // ============= Connect to server
     struct sockaddr_in serverAddr;
@@ -57,6 +32,7 @@ int main()
 
     std::cout << "after connection" << std::endl;
 
+    // ============= Send message
     std::string message = "This is a message"; // should prob check the length
     char buf[100];
     strncpy(buf, message.c_str(), sizeof(buf));

@@ -16,16 +16,13 @@ int main()
         return -1;
     }
     std::cout << "after creation" << std::endl;
+    
     // bind to an address and port?
-    // struct hostent *hostInfo;
-    // hostInfo = gethostbyname("127.0.0.1");
-
     struct sockaddr_in socketAddr;
 
     socketAddr.sin_family = AF_INET; // Address family
     socketAddr.sin_port = htons(5051); // Port
     inet_aton("127.0.0.1", &socketAddr.sin_addr); // ipv4 address
-    // socketAddr.sin_addr = *(struct in_addr *) hostInfo->h_name;
 
 
     if (bind(tcpSocket, (struct sockaddr*) &socketAddr, sizeof(socketAddr)) == -1) {
