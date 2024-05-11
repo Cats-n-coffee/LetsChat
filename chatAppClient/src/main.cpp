@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <string.h>
+#include <errno.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <arpa/inet.h>
@@ -12,7 +13,7 @@ int main()
     int tcpSocket = socket(AF_INET, SOCK_STREAM, 0);
 
     if (tcpSocket == -1) {
-        std::cout << "error creation" << std::endl; // TODO check error logging
+        std::cout << "error creation" << strerror(errno) << std::endl;
         return -1;
     }
     std::cout << "after creation" << std::endl;
@@ -25,8 +26,7 @@ int main()
     inet_aton("127.0.0.1", &serverAddr.sin_addr); // ipv4 address
 
     if (connect(tcpSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr)) == -1) {
-        // TODO handle error
-        std::cout << "error connection" << std::endl;
+        std::cout << "error connection " << strerror(errno) << strerror(errno) << std::endl;
         return -1;
     }
 
@@ -39,16 +39,14 @@ int main()
     buf[sizeof(buf) - 1] = 0;
 
     if (send(tcpSocket, buf, sizeof(buf), 0) == -1) {
-        // TODO handle error
-        std::cout << "error send" << std::endl;
+        std::cout << "error send" << strerror(errno) << std::endl;
         return -1;
     }
     std::cout << "after send" << std::endl;
 
     // ============== Close Socket
     if (close(tcpSocket) == -1) {
-        // TODO handle error
-        std::cout << "error closing" << std::endl;
+        std::cout << "error closing" << strerror(errno) << std::endl;
         return -1;
     }
 }

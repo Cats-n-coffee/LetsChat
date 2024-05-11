@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <string.h>
+#include <errno.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <arpa/inet.h>
@@ -12,7 +13,7 @@ int main()
     int tcpSocket = socket(AF_INET, SOCK_STREAM, 0);
 
     if (tcpSocket == -1) {
-        std::cout << "error creation" << std::endl; // TODO check error logging
+        std::cout << "error creation" << strerror(errno) << std::endl;
         return -1;
     }
     std::cout << "after creation" << std::endl;
@@ -26,16 +27,14 @@ int main()
 
 
     if (bind(tcpSocket, (struct sockaddr*) &socketAddr, sizeof(socketAddr)) == -1) {
-        // TODO handle error
-        std::cout << "error bind" << std::endl;
+        std::cout << "error bind" << strerror(errno) << std::endl;
         return -1;
     }
     std::cout << "after bind" << std::endl;
 
     // ============== Listen for incoming connections
     if (listen(tcpSocket, 50) == -1) {
-        // TODO handle error
-        std::cout << "error listen" << std::endl;
+        std::cout << "error listen" << strerror(errno) << std::endl;
         return -1;
     }
     std::cout << "after listen" << std::endl;
@@ -49,8 +48,7 @@ int main()
         std::cout << "after accept" << connectedSocket << std::endl;
 
         if (connectedSocket == -1) {
-            // TODO handle error
-            std::cout << "error accept" << std::endl;
+            std::cout << "error accept" << strerror(errno) << std::endl;
             return -1;
         }
 
@@ -59,8 +57,7 @@ int main()
         ssize_t receivedMessage = recv(connectedSocket, messageBuf, sizeof(messageBuf), 0);
 
         if (receivedMessage == -1) {
-            // TODO handle error
-            std::cout << "error recv" << std::endl;
+            std::cout << "error recv" << strerror(errno) << std::endl;
             return -1;
         }
 
@@ -69,8 +66,7 @@ int main()
 
     // ============== Close socket
     if (close(tcpSocket) == -1) {
-        // handle error
-        std::cout << "error closing" << std::endl;
+        std::cout << "error closing" << strerror(errno) << std::endl;
         return -1;
     }
 }
