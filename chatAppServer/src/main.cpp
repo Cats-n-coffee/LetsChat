@@ -2,22 +2,22 @@
 #include <string>
 #include <string.h>
 #include <netinet/in.h>
-// #include <netdb.h>
+#include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
 int main()
 {
-    // Create a socket
+    // =========== Create a socket
     int tcpSocket = socket(AF_INET, SOCK_STREAM, 0);
 
     if (tcpSocket == -1) {
-        std::cout << "error creation" << std::endl; // check error logging
+        std::cout << "error creation" << std::endl; // TODO check error logging
         return -1;
     }
     std::cout << "after creation" << std::endl;
-    
-    // bind to an address and port?
+
+    // ============ Bind socket to an address and port, so clients can find it
     struct sockaddr_in socketAddr;
 
     socketAddr.sin_family = AF_INET; // Address family
@@ -26,41 +26,51 @@ int main()
 
 
     if (bind(tcpSocket, (struct sockaddr*) &socketAddr, sizeof(socketAddr)) == -1) {
-        // handle error
+        // TODO handle error
         std::cout << "error bind" << std::endl;
         return -1;
     }
     std::cout << "after bind" << std::endl;
-    // listen for requests?
+
+    // ============== Listen for incoming connections
     if (listen(tcpSocket, 50) == -1) {
-        // handle error
+        // TODO handle error
         std::cout << "error listen" << std::endl;
         return -1;
     }
     std::cout << "after listen" << std::endl;
 
-    // accept requests?
-    struct sockaddr_in connectionSocketAddress;
-    socklen_t connectionSocketAddressSize = sizeof(connectionSocketAddress);
-    int connectedSocket = accept(tcpSocket, (struct sockaddr *) &connectionSocketAddress, &connectionSocketAddressSize);
-    
-    std::cout << "after accept" << std::endl;
+    // ============= Accept client connections
+    while (1) {
+        struct sockaddr_in connectionSocketAddress;
+        socklen_t connectionSocketAddressSize = sizeof(connectionSocketAddress);
+        int connectedSocket = accept(tcpSocket, (struct sockaddr *) &connectionSocketAddress, &connectionSocketAddressSize);
+        
+        std::cout << "after accept" << connectedSocket << std::endl;
 
-    if (connectedSocket == -1) {
-        // handle error
-        std::cout << "error accept" << std::endl;
-        return -1;
+        if (connectedSocket == -1) {
+            // TODO handle error
+            std::cout << "error accept" << std::endl;
+            return -1;
+        }
+
+        // ============= Read message from client
+        char messageBuf[100];
+        ssize_t receivedMessage = recv(connectedSocket, messageBuf, sizeof(messageBuf), 0);
+
+        if (receivedMessage == -1) {
+            // TODO handle error
+            std::cout << "error recv" << std::endl;
+            return -1;
+        }
+
+        std::cout << "received message length " << receivedMessage << " Message: " << messageBuf << std::endl;
     }
 
-    // read?
-    char messageBuf[100];
-    ssize_t receivedMessage = recv(connectedSocket, messageBuf, sizeof(messageBuf), 0);
-
-    if (receivedMessage == -1) {
+    // ============== Close socket
+    if (close(tcpSocket) == -1) {
         // handle error
-        std::cout << "error recv" << std::endl;
+        std::cout << "error closing" << std::endl;
         return -1;
     }
-    // send?
-    std::cout << "received message length " << receivedMessage << " Message: " << messageBuf << std::endl;
 }

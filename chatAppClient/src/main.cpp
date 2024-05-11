@@ -2,7 +2,7 @@
 #include <string>
 #include <string.h>
 #include <netinet/in.h>
-// #include <netdb.h>
+#include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
@@ -12,7 +12,7 @@ int main()
     int tcpSocket = socket(AF_INET, SOCK_STREAM, 0);
 
     if (tcpSocket == -1) {
-        std::cout << "error creation" << std::endl; // check error logging
+        std::cout << "error creation" << std::endl; // TODO check error logging
         return -1;
     }
     std::cout << "after creation" << std::endl;
@@ -21,11 +21,11 @@ int main()
     struct sockaddr_in serverAddr;
 
     serverAddr.sin_family = AF_INET; // Address family
-    serverAddr.sin_port = htons(5051); // Port
+    serverAddr.sin_port = htons(5051); //  Server Port
     inet_aton("127.0.0.1", &serverAddr.sin_addr); // ipv4 address
 
     if (connect(tcpSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr)) == -1) {
-        // handle error
+        // TODO handle error
         std::cout << "error connection" << std::endl;
         return -1;
     }
@@ -39,24 +39,16 @@ int main()
     buf[sizeof(buf) - 1] = 0;
 
     if (send(tcpSocket, buf, sizeof(buf), 0) == -1) {
-        // handle error
+        // TODO handle error
         std::cout << "error send" << std::endl;
         return -1;
     }
     std::cout << "after send" << std::endl;
 
-    // accept requests?
-    // struct sockaddr_in connectionSocketAddress;
-    // socklen_t connectionSocketAddressSize = sizeof(connectionSocketAddress);
-    // int connectionSocket = accept(tcpSocket, (struct sockaddr *) &connectionSocketAddress, &connectionSocketAddressSize);
-    // std::cout << "after accept" << std::endl;
-    // if (connectionSocket == -1) {
-    //     // handle error
-    //     std::cout << "error accept" << std::endl;
-    //     return -1;
-    // }
-    // read?
-
-    // send?
-
+    // ============== Close Socket
+    if (close(tcpSocket) == -1) {
+        // TODO handle error
+        std::cout << "error closing" << std::endl;
+        return -1;
+    }
 }
