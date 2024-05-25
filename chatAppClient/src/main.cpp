@@ -35,7 +35,10 @@ int main()
     std::cout << "after connection" << std::endl;
 
     // ============= Send message
-    while (connection != -1) {
+    while (true) {
+        // Probably need to check for connection to still be there?
+
+        // Write
         std::string userMessage = "";
 
         std::cout << "Enter your message: " << std::endl;
@@ -51,6 +54,16 @@ int main()
             return -1;
         }
         std::cout << "after send" << std::endl;
+
+        // Read
+        char incomingMessage[100];
+        ssize_t messageLength = recv(tcpSocket, incomingMessage, sizeof(incomingMessage), 0);
+        
+        if (messageLength == -1) {
+            std::cout << "error receiving from server " << strerror(errno) << std::endl;
+        }
+
+        std::cout << "FROM Server: " << std::string(incomingMessage) << std::endl;
     }
     
 

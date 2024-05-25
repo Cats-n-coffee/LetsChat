@@ -1,67 +1,22 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <thread>
 #include <string.h>
 #include <errno.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <poll.h>
 
 // =========== All connections
-std::vector<int> allClients = {};
+int listener;
+std::vector<pollfd> allClients;
 
-// =========== Threads handlers
-
-// Create thread to loop over connected clients
-void handleMessages(std::vector<int> connections)
-{
-    std::cout << "======= inside message thread" << std::endl;
-    // use poll() here
-    // for (int connectedSocket : connections) {
-    //     std::cout << "======= current " << connectedSocket << std::endl;
-
-    //     // ============= Read message from client
-    //     char messageBuf[100];
-    //     ssize_t receivedMessage = recv(connectedSocket, messageBuf, sizeof(messageBuf), 0);
-
-    //     if (receivedMessage == -1) {
-    //         std::cout << "error recv " << strerror(errno) << std::endl;
-    //         // return -1;
-    //     }
-
-    //     std::cout << "received message length " << receivedMessage << " Message: " << messageBuf << std::endl;
-    // }
-    std::cout << "======= end of message thread" << std::endl;
-}
-
-// Accept client connections
-void handleConnections(int tcpSocket)
-{
-    std::cout << "======= inside  accept thread" << std::endl;
-    while (1) {
-        struct sockaddr_in connectionSocketAddress;
-        socklen_t connectionSocketAddressSize = sizeof(connectionSocketAddress);
-        int connectedSocket = accept(tcpSocket, (struct sockaddr *) &connectionSocketAddress, &connectionSocketAddressSize);
-        
-        std::cout << "after accept" << connectedSocket << std::endl;
-
-        if (connectedSocket == -1) {
-            std::cout << "error accept" << strerror(errno) << std::endl;
-            // return -1;
-        }
-
-        allClients.push_back(connectedSocket);
-    }
-    std::cout << "======= end of accept thread" << std::endl;
-}
 
 // =========== Server
 int main()
 {
-    std::vector<std::thread> threads = {};
-
     // =========== Create a socket
     int tcpSocket = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -92,13 +47,86 @@ int main()
     }
     std::cout << "after listen" << std::endl;
 
-    // ============  Create threads for connections and messages
+    pollfd listenerSocket;
+    listenerSocket.fd = tcpSocket;
+    listenerSocket.events = POLLIN;
 
-    threads.push_back(std::thread(handleConnections, tcpSocket));
-    threads.push_back(std::thread(handleMessages, allClients));
+    allClients.push_back(listenerSocket);
 
-    for (int i = 0; i < threads.size(); i++) {
-        threads[i].join();
+    listener = tcpSocket;
+
+    // ============== Main loop with poll
+    while (true) {
+        int numberOfEvents = poll(allClients.data(), (nfds_t) allClients.size(), 2000);
+        std::cout << "poll num " << numberOfEvents << std::endl;
+        if (numberOfEvents == -1) {
+            std::cout << "poll error" << strerror(errno) << std::endl;
+            return -1;
+        }
+
+        std::vector<int> disconnectedClients;
+
+        for (int i = 0; i < allClients.size(); i++) {
+            if (allClients[i].revents & POLLIN) {
+                if (allClients[i].fd == listener) {
+                    std::cout << "SERVER!!" << std::endl;
+                    struct sockaddr_in connectionSocketAddress;
+                    socklen_t connectionSocketAddressSize = sizeof(connectionSocketAddress);
+                    int connectedSocket = accept(tcpSocket, (struct sockaddr *) &connectionSocketAddress, &connectionSocketAddressSize);
+                    
+                    std::cout << "after accept" << connectedSocket << std::endl;
+
+                    if (connectedSocket == -1) {
+                        std::cout << "error accept" << strerror(errno) << std::endl;
+                        return -1;
+                    }
+
+                    pollfd connectedClient;
+                    connectedClient.fd = connectedSocket;
+                    connectedClient.events = POLLIN;
+
+                    allClients.push_back(connectedClient);
+                }
+                else {
+                    std::cout << "INCOMING!!" << std::endl;
+                    // ============= Read message from client
+                    char messageBuf[100];
+                    ssize_t receivedMessage = recv(allClients[i].fd, messageBuf, sizeof(messageBuf), 0);
+
+                    if (receivedMessage == -1) {
+                        std::cout << "error recv " << strerror(errno) << std::endl;
+                        return -1;
+                    }
+
+                    std::cout << "RECV return " << receivedMessage << std::endl;
+
+                    if (receivedMessage > 0) {
+                        std::cout << "RECEIVED: " << std::string(messageBuf) << std::endl;
+                        // push message to other connected clients
+                        // should we have a separate send function
+                        for (int j = 0; j < allClients.size(); j++) {
+                            if (allClients[j].fd != listener && allClients[j].fd != allClients[i].fd) {
+                                if (send(allClients[j].fd, messageBuf, receivedMessage, 0) == -1) {
+                                    std::cout << "error in send " << strerror(errno) << std::endl;
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (receivedMessage == 0) { // Begin handling client disconnections
+                        // Push client index as it currently is in the vector allClients
+                        disconnectedClients.push_back(i);
+                    }
+                }
+            }
+        }
+
+        // Remove disconnected clients from the vector
+        for (int i = 0; i < disconnectedClients.size(); i++) {
+            allClients.erase(allClients.begin() + disconnectedClients[i]);
+        }
+        disconnectedClients.clear();
+        std::cout << "After all " << allClients.size() << std::endl;
     }
 
     // ============== Close socket
