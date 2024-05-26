@@ -1,5 +1,7 @@
 #include <iostream>
 #include <string>
+#include <thread>
+#include <vector>
 #include <string.h>
 #include <errno.h>
 #include <netinet/in.h>
@@ -7,8 +9,48 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
+int clientSocket;
+
+void sendMessageHandler()
+{
+    std::string userMessage = "";
+
+    while (true) {
+        std::cout << "Enter your message: " << std::endl;
+        std::getline(std::cin, userMessage);
+
+        char buf[100];
+        strncpy(buf, userMessage.c_str(), sizeof(buf));
+        buf[sizeof(buf) - 1] = 0;
+
+        if (send(clientSocket, buf, sizeof(buf), 0) == -1) {
+            std::cout << "Error sending message, try reconnecting " << strerror(errno) << std::endl;
+            exit(1);
+        }
+
+        userMessage = "";
+    }
+}
+
+void receiveMessageHandler()
+{
+    while (true) {
+        char incomingMessage[100];
+        ssize_t messageLength = recv(clientSocket, incomingMessage, sizeof(incomingMessage), 0);
+        
+        if (messageLength == -1) {
+            std::cout << "Error receiving from server, try reconnecting " << strerror(errno) << std::endl;
+            exit(1);
+        }
+
+        std::cout << "--------------- FROM Server: " << std::string(incomingMessage) << std::endl;
+    }
+}
+
 int main()
 {
+    std::vector<std::thread> clientThreads;
+
     // ============ Create a socket
     int tcpSocket = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -17,6 +59,7 @@ int main()
         return -1;
     }
     std::cout << "after creation" << std::endl;
+    clientSocket = tcpSocket;
 
     // ============= Connect to server
     struct sockaddr_in serverAddr;
@@ -34,38 +77,14 @@ int main()
 
     std::cout << "after connection" << std::endl;
 
-    // ============= Send message
-    while (true) {
-        // Probably need to check for connection to still be there?
+    // ============= Send/Receive messages
 
-        // Write
-        std::string userMessage = "";
+    clientThreads.push_back(std::thread(sendMessageHandler));
+    clientThreads.push_back(std::thread(receiveMessageHandler));
 
-        std::cout << "Enter your message: " << std::endl;
-        std::getline(std::cin, userMessage);
-        std::cout << "entrered " << userMessage << std::endl;
-
-        char buf[100];
-        strncpy(buf, userMessage.c_str(), sizeof(buf));
-        buf[sizeof(buf) - 1] = 0;
-
-        if (send(tcpSocket, buf, sizeof(buf), 0) == -1) {
-            std::cout << "error send" << strerror(errno) << std::endl;
-            return -1;
-        }
-        std::cout << "after send" << std::endl;
-
-        // Read
-        char incomingMessage[100];
-        ssize_t messageLength = recv(tcpSocket, incomingMessage, sizeof(incomingMessage), 0);
-        
-        if (messageLength == -1) {
-            std::cout << "error receiving from server " << strerror(errno) << std::endl;
-        }
-
-        std::cout << "FROM Server: " << std::string(incomingMessage) << std::endl;
-    }
-    
+    for (int i = 0; i < clientThreads.size(); i++) {
+        clientThreads[i].join();
+    }    
 
     // ============== Close Socket
     if (close(tcpSocket) == -1) {
